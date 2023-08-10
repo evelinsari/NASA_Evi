@@ -2,8 +2,8 @@ import "./style.css";
 import http from "axios";
 import { z } from "zod";
 
+const BASE_URL = "https://api.nasa.gov/planetary/apod"
 
-const API_KEY = "nLWaSfZkbebvdIik0TXytDyOhQdo1EaBjRtk9ZZF"
 
 const NasaResponseSchema = z.object({
   url: z.string(),
@@ -13,30 +13,20 @@ const NasaResponseSchema = z.object({
 
 type NasaResponse = z.infer<typeof NasaResponseSchema>;
 
-const loadCurrentAPOD = async (): Promise<NasaResponse | null> => {
-  const response = await http.get("https://api.nasa.gov/planetary/apod?api_key=" + API_KEY); 
-  const data = response.data;
+const getData = async (selectedDate: string) => {
+  const response = await http.get(BASE_URL, {
+    params: {
+      date: selectedDate,
+      api_key: "nLWaSfZkbebvdIik0TXytDyOhQdo1EaBjRtk9ZZF"
+    }
+  })
 
-  const result = NasaResponseSchema.safeParse(data) // ha valami nem megfelelő a sémának
-  if (!result.success) {
-    console.log(result.error)
-    return null
-  } 
-
-  return result.data;
+  return response.data;
 }
 
-const loadPage = async () => {
-  const currentDetails = await loadCurrentAPOD();
-  renderDetails(currentDetails)
-};
-
-loadPage()
-
-// 
-const loadSelectedAPOD = async (selectedDate: string): Promise<NasaResponse | null> => {
-  const response = await http.get("https://api.nasa.gov/planetary/apod?date=" + selectedDate + "&api_key=" + API_KEY); 
-  const data = response.data;
+const loadAPOD = async (selectedDate: string): Promise<NasaResponse | null> => {
+  
+  const data = getData(selectedDate);
 
   const result = NasaResponseSchema.safeParse(data)
   if (!result.success) {
@@ -46,16 +36,30 @@ const loadSelectedAPOD = async (selectedDate: string): Promise<NasaResponse | nu
   return result.data;
 }
 
-const getSelectedAPOD = async () => {  
-  let dateInput = document.getElementById("myDate") as HTMLSelectElement
+const loadPage = async () => {
+  const currentDetails = await loadAPOD("");
+  renderDetails(currentDetails)
+};
+
+loadPage()
+
+const getAPOD = async () => {  
+  let dateInput = getDateInput()
   let selectedDate = dateInput.value
-  const selectedDetails = await loadSelectedAPOD(selectedDate)
+  const selectedDetails = await loadAPOD(selectedDate)
   renderDetails(selectedDetails)
 }
-const button = document.getElementById("load-button")
-button?.addEventListener("click", getSelectedAPOD);
+function getDateInput() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById("datePicker")!.setAttribute("max", today);
+  
+  return document.getElementById("datePicker") as HTMLSelectElement
+}
 
-getSelectedAPOD();
+const button = document.getElementById("load-button")
+button?.addEventListener("click", getAPOD);
+
+getAPOD();
 
 
 function renderPic(url: string){ 
@@ -77,3 +81,6 @@ function renderDetails(details: NasaResponse| null) {
     renderExplanation(details.explanation)
   }
 }
+
+
+
